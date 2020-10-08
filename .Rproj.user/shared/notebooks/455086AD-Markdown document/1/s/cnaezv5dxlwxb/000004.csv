@@ -1,2 +1,0 @@
-"0",""
-"0","(ofsted_filtered <- filter(ofsted, !is.na(Previous.full.inspection.overall.effectiveness)))"

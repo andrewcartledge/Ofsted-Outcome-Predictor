@@ -19,11 +19,11 @@ First though we need to install some packages
 
 # This lists all the packages used in the project, more packages may be added as the project rolls on!
 
-install.packages("tidyverse", dependencies = TRUE)
-install.packages("openxlsx", dependencies = TRUE)
-install.packages("stringr", dependencies = TRUE)
-install.packages("pivottabler", dependencies = TRUE)
-install.packages("devtools", dependencies = TRUE)
+if(!require("tidyverse")) install.packages("tidyverse", dependencies = TRUE)
+if(!require("openxlsx")) install.packages("openxlsx", dependencies = TRUE)
+if(!require("stringr")) install.packages("stringr", dependencies = TRUE)
+if(!require("pivottabler")) install.packages("pivottabler", dependencies = TRUE)
+if(!require("devtools")) install.packages("devtools", dependencies = TRUE)
 
 ```
 
@@ -133,6 +133,12 @@ ggplot(ofsted_filtered) +
 ```
 Much better! Now it is quite clear that most schools that were graded 2 previous stay at a two or move up to a 1. Most schools graded 3 moved up to a 2 and even the majority of 4 moved to a 2. There is some backsliding for schools that were 1 slipping back to a 2 but that is still a good outcome. However I would not present this chart to anyone. To make this a bit more user friendly I'm going to have to summarise the data and then produce a stacked bar chart from the outcomes I will produce two of these one will be a straight count the other will be proportion based.
 
+This is a nice way of visualising tables:
+
+```{r}
+mosaicplot(xtabs(~ Overall.effectiveness + Previous.full.inspection.overall.effectiveness, data = ofsted_filtered))
+```
+
 ```{r Summarise}
 
 Ofsted_outcomes_summed <- ofsted_filtered %>% 
@@ -167,7 +173,7 @@ It might be a good idea to contrast this chart with that of Warwickshire
 ```{r Warwickshire chart}
 
 warks_filtered <- ofsted_filtered %>%
-  filter(Localauthority == "Warwickshire")
+  filter(Local.authority == "Warwickshire")
 
 ofsted_filtered_chart <- mutate(ofsted_filtered, plotGroup = "National")
 
@@ -177,8 +183,8 @@ ofsted_filtered_chart <- ofsted_filtered_chart %>%
   add_row(warks_filtered)
 
 ggplot(ofsted_filtered_chart) +
-  geom_bar(mapping = aes(x = Previousfullinspectionoveralleffectiveness, 
-                         fill = as.character(Overalleffectiveness)
+  geom_bar(mapping = aes(x = Previous.full.inspection.overall.effectiveness, 
+                         fill = as.character(Overall.effectiveness)
                          ), 
            position = "Fill"
            ) +
@@ -186,6 +192,9 @@ ggplot(ofsted_filtered_chart) +
 
 ```
 As you can see we have a larger proportion of 4's going to 3's than occurs in the national dataset. We also have no 1's going down to 4's.
+
+
+
 
 Time to start working on a logistic regression of my dataset. Next we will do a test of logistic regression.
 
@@ -214,27 +223,112 @@ ofsted_filtered_reg <- mutate(ofsted_filtered_reg, pos_out = ifelse(current_out 
 # ofsted_filtered_reg$prev_out <- as.factor(ofsted_filtered_reg$prev_out)
 ofsted_filtered_reg$Ofstedphase <- as.factor(ofsted_filtered_reg$Ofstedphase)
 
+ofsted_filtered_reg <- ofsted_filtered_reg %>% 
+  mutate(prev_out = factor(prev_out),
+         IDACI = factor(IDACI),
+         Academy = factor(Academy))
+
 logit <- glm(pos_out ~ prev_out + IDACI + Academy + Ofstedphase, data = ofsted_filtered_reg, family = "binomial")
 
 summary(logit)
 
-# e exponent?
+exp(coef(logit))
 
 # Tree based regression?
 
-# Git hub repository
+```
+So on the basis of these results the most important precursor to a positive outcome is the previous inspection outcome and bizarrely if the school is a special school.
+
+Another model would be tree based regression, so I will give that a go and see if I get similar results.
+
+```{r Tree based regression test}
+
+
 
 ```
 
-
 ```{r The fun zone! For tests and giggles!}
 
-ggplot(ofsted_filtered_reg) +
-  geom_point(mapping = aes(x = Previousfullinspectionoveralleffectiveness, y = Overalleffectiveness), position = "Jitter")
+# Recreate Bostock Sankey diagram: http://bost.ocks.org/mike/sankey/
+# Load energy projection data
+URL <- paste0('https://cdn.rawgit.com/christophergandrud/networkD3/master/JSONdata/energy.json')
+energy <- jsonlite::fromJSON(URL)
 
-temp <- filter(ofsted_filtered_reg, pos_out == 1)
+# Plot
+sankeyNetwork(Links = energy$links, Nodes = energy$nodes, Source = 'source',
+             Target = 'target', Value = 'value', NodeID = 'name',
+             units = 'TWh', fontSize = 12, nodeWidth = 30)
 
-ggplot(temp) +
-  geom_point(mapping = aes(x = Previousfullinspectionoveralleffectiveness, y = Overalleffectiveness), color = "blue")
+# Colour links
+energy$links$energy_type <- sub(' .*', '',
+                               energy$nodes[energy$links$source + 1, 'name'])
+
+sankeyNetwork(Links = energy$links, Nodes = energy$nodes, Source = 'source',
+             Target = 'target', Value = 'value', NodeID = 'name',
+             LinkGroup = 'energy_type', NodeGroup = NULL)
+
+
+
+```
+
+Testing out sankey plot but looks like it requires Shiny stuff that I have not learnt yet. So will continue on for now with other stuff!
+
+```{r Sankey plot}
+install.packages("sankey")
+install.packages("networkD3")
+
+library(sankey)
+library(networkD3)
+
+test_table <- tribble(
+  ~ID, ~PrevOut, ~CurrOut, ~Value,
+  #--/-/-/----
+  1,1,1,100,
+  2,1,2,200,
+  3,1,3,300,
+  4,1,4,400,
+  5,2,1,200,
+  6,2,2,400,
+  7,2,3,600,
+  8,2,4,800,
+  9,3,1,300,
+  10,3,2,600,
+  11,3,3,900,
+  12,3,4,1200,
+  13,4,1,400,
+  14,4,2,800,
+  15,4,3,1200,
+  16,4,4,1600)
+
+test_table2 <- tibble(
+  Col1 = "ID",
+  Col2 = "PrevOut",
+  Col3 = "CurrOut",
+  Col4 = "Value"
+)
+testing1 <- sankeyNetwork(Links = test_table, Nodes = test_table2, Source = test_table$PrevOut, Target = test_table$CurrOut, units = test_table$Value)
+
+sankeyNetworkOutput(testing1)
+
+small_filtered <- ofsted_filtered %>%
+  select(Previousfullinspectionoveralleffectiveness, Overalleffectiveness) %>%
+  group_by(Previousfullinspectionoveralleffectiveness, Overalleffectiveness) %>%
+  summarise(total = n())
+
+new_small_filtered <- small_filtered %>%
+  mutate(link = paste("'Source':",Previousfullinspectionoveralleffectiveness,",'Target':",Overalleffectiveness,",'Value':",total))
+
+table_headers <- read.table(stringsAsFactors = FALSE, textConnection(
+  "Previousfullinspectionoveralleffectiveness Overalleffectiveness")
+)
+
+testing1 <- sankeyNetwork(Links = new_small_filtered$link, Nodes = table_headers, Source = c(1:16), Target = c(1:16), units = new_small_filtered$total)
+
+ggplot(small_filtered) +
+  geom_ribbon(mapping = )
+  
+sankey_data <- make_sankey(edges = small_filtered)
+
+sankey(sankey_data)
 
 ```

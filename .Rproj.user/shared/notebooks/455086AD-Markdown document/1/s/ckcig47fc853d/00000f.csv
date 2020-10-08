@@ -1,4 +1,0 @@
-"0",""
-"0","ggplot(ofsted_filtered) +"
-"0","  geom_bar(mapping = aes(x = Previous.full.inspection.overall.effectiveness, fill = as.character(Overall.effectiveness)))"
-"0",""

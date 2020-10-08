@@ -1,6 +1,0 @@
-"0",""
-"0","Ofsted_outcomes_summed <- ofsted_filtered %>% "
-"0","  group_by(Previous.full.inspection.overall.effectiveness, Overall.effectiveness) %>%"
-"0","    summarise(n())"
-"2","`summarise()` regrouping output by 'Previous.full.inspection.overall.effectiveness' (override with `.groups` argument)
-"

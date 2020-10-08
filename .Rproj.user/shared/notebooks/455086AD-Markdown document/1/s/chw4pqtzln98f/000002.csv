@@ -1,6 +1,0 @@
-"0",""
-"0","#This could likely be done within the ofsted data itself and I will attempt this after matching the data together"
-"0",""
-"0","ofsted <- left_join(x = ofsted, y = edubase_to_ofsted, x.URN = y.URN)"
-"2","Joining, by = ""URN""
-"
