@@ -1,0 +1,5 @@
+"0",""
+"0","ofsted <- mutate(ofsted, LA.Code = as.integer(substr(LAESTAB,1,3)))"
+"0",""
+"0","view(ofsted)"
+"0",""

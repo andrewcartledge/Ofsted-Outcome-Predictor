@@ -1,0 +1,8 @@
+"0",""
+"0","#Test if the matching has worked"
+"0",""
+"0","ofsted %>%"
+"0","  mutate(tester = ofsted[""Academy""]==ofsted[""ofsted_acad""]) %>%"
+"0","    filter(tester==FALSE) %>%"
+"0","      View()"
+"0",""

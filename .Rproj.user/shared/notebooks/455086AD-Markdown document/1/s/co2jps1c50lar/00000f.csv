@@ -1,0 +1,12 @@
+"0","edubase <- read_csv(
+  ""data/edubasealldata20200921.csv"", 
+  col_types = cols(`SEN13 (name)` = col_skip(), FEHEIdentifier = col_skip(), InspectorateReport = col_skip(), DateOfLastInspectionVisit = col_skip()),
+  guess_max = 10000
+  )
+"
+"2","3 parsing failures.
+  row      col           expected                                  actual                              file
+33894 SiteName 1/0/T/F/TRUE/FALSE motorvations@hopewell                   'data/edubasealldata20200921.csv'
+38085 SiteName 1/0/T/F/TRUE/FALSE Old Kingdom Hall                        'data/edubasealldata20200921.csv'
+44189 SiteName 1/0/T/F/TRUE/FALSE Clubhouse Unit, behind Bentinck Welfare 'data/edubasealldata20200921.csv'
+"

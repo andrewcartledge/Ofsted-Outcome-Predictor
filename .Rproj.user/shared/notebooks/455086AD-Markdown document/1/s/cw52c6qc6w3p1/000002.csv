@@ -1,0 +1,5 @@
+"0",""
+"0","# If we're lucky we'll get an idea of the trend now"
+"0",""
+"0","ggplot(ofsted_filtered) +"
+"0","  geom_point(mapping = aes(x = Previous.full.inspection.overall.effectiveness, y = Overall.effectiveness), position = ""Jitter"")"

@@ -1,0 +1,262 @@
+"1","
+"
+"1","  Binaries will be installed
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.0/brio_1.1.0.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 45695 bytes (44 KB)
+"
+"2","downloaded 44 KB
+
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.0/textshaping_0.1.1.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 2026984 bytes (1.9 MB)
+"
+"2","downloaded 1.9 MB
+
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.0/clisymbols_1.2.0.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 21092 bytes (20 KB)
+"
+"2","downloaded 20 KB
+
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.0/gargle_0.5.0.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 397661 bytes (388 KB)
+"
+"2","downloaded 388 KB
+
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.0/cyclocomp_1.1.0.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 33260 bytes (32 KB)
+"
+"2","downloaded 32 KB
+
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.0/xmlparsedata_1.0.4.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 21380 bytes (20 KB)
+"
+"2","downloaded 20 KB
+
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.0/downlit_0.2.0.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 96391 bytes (94 KB)
+"
+"2","downloaded 94 KB
+
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.0/ragg_0.3.1.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 2649897 bytes (2.5 MB)
+"
+"2","downloaded 2.5 MB
+
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.0/parsedate_1.2.0.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 64954 bytes (63 KB)
+"
+"2","downloaded 63 KB
+
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.0/rappdirs_0.3.1.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 147920 bytes (144 KB)
+"
+"2","downloaded 144 KB
+
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.0/uuid_0.1-4.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 33733 bytes (32 KB)
+"
+"2","downloaded 32 KB
+
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.0/whoami_1.3.0.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 31784 bytes (31 KB)
+"
+"2","downloaded 31 KB
+
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.0/hunspell_3.0.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 2034489 bytes (1.9 MB)
+"
+"2","downloaded 1.9 MB
+
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.0/usethis_1.6.3.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 603736 bytes (589 KB)
+"
+"2","downloaded 589 KB
+
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.0/covr_3.5.1.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 305544 bytes (298 KB)
+"
+"2","downloaded 298 KB
+
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.0/BiocManager_1.30.10.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 100063 bytes (97 KB)
+"
+"2","downloaded 97 KB
+
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.0/foghorn_1.3.1.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 124053 bytes (121 KB)
+"
+"2","downloaded 121 KB
+
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.0/gmailr_1.0.0.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 234217 bytes (228 KB)
+"
+"2","downloaded 228 KB
+
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.0/lintr_2.0.1.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 345991 bytes (337 KB)
+"
+"2","downloaded 337 KB
+
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.0/mockery_0.4.2.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 44653 bytes (43 KB)
+"
+"2","downloaded 43 KB
+
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.0/pingr_2.0.1.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 58910 bytes (57 KB)
+"
+"2","downloaded 57 KB
+
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.0/pkgdown_1.6.1.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 510444 bytes (498 KB)
+"
+"2","downloaded 498 KB
+
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.0/rhub_1.1.1.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 980627 bytes (957 KB)
+"
+"2","downloaded 957 KB
+
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.0/spelling_2.1.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 55004 bytes (53 KB)
+"
+"2","downloaded 53 KB
+
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.0/devtools_2.3.2.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 339648 bytes (331 KB)
+"
+"2","downloaded 331 KB
+
+"
+"1","package ‘brio’ successfully unpacked and MD5 sums checked
+"
+"1","package ‘textshaping’ successfully unpacked and MD5 sums checked
+"
+"1","package ‘clisymbols’ successfully unpacked and MD5 sums checked
+"
+"1","package ‘gargle’ successfully unpacked and MD5 sums checked
+"
+"1","package ‘cyclocomp’ successfully unpacked and MD5 sums checked
+"
+"1","package ‘xmlparsedata’ successfully unpacked and MD5 sums checked
+"
+"1","package ‘downlit’ successfully unpacked and MD5 sums checked
+"
+"1","package ‘ragg’ successfully unpacked and MD5 sums checked
+"
+"1","package ‘parsedate’ successfully unpacked and MD5 sums checked
+"
+"1","package ‘rappdirs’ successfully unpacked and MD5 sums checked
+"
+"1","package ‘uuid’ successfully unpacked and MD5 sums checked
+"
+"1","package ‘whoami’ successfully unpacked and MD5 sums checked
+"
+"1","package ‘hunspell’ successfully unpacked and MD5 sums checked
+"
+"1","package ‘usethis’ successfully unpacked and MD5 sums checked
+"
+"1","package ‘covr’ successfully unpacked and MD5 sums checked
+"
+"1","package ‘BiocManager’ successfully unpacked and MD5 sums checked
+"
+"1","package ‘foghorn’ successfully unpacked and MD5 sums checked
+"
+"1","package ‘gmailr’ successfully unpacked and MD5 sums checked
+"
+"1","package ‘lintr’ successfully unpacked and MD5 sums checked
+"
+"1","package ‘mockery’ successfully unpacked and MD5 sums checked
+"
+"1","package ‘pingr’ successfully unpacked and MD5 sums checked
+"
+"1","package ‘pkgdown’ successfully unpacked and MD5 sums checked
+"
+"1","package ‘rhub’ successfully unpacked and MD5 sums checked
+"
+"1","package ‘spelling’ successfully unpacked and MD5 sums checked
+"
+"1","package ‘devtools’ successfully unpacked and MD5 sums checked
+"
+"1","
+"
+"1",""
+"1","The downloaded binary packages are in
+	C:\Users\acar3\AppData\Local\Temp\RtmporfF8h\downloaded_packages"
+"1",""
+"1","
+"
