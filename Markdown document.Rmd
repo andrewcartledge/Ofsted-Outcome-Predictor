@@ -19,23 +19,11 @@ First though we need to install some packages
 
 # This lists all the packages used in the project, more packages may be added as the project rolls on!
 
-install.packages("tidyverse", dependencies = TRUE)
-install.packages("openxlsx", dependencies = TRUE)
-install.packages("stringr", dependencies = TRUE)
-install.packages("pivottabler", dependencies = TRUE)
-install.packages("devtools", dependencies = TRUE)
-
-```
-
-Then we need to load the packages into memory
-
-```{r Load packages}
-
-library(tidyverse)
-library(openxlsx)
-library(stringr)
-library(pivottabler)
-library(devtools)
+if(!require("tidyverse")) install.packages("tidyverse", dependencies = TRUE)
+if(!require("openxlsx")) install.packages("openxlsx", dependencies = TRUE)
+if(!require("stringr")) install.packages("stringr", dependencies = TRUE)
+if(!require("pivottabler")) install.packages("pivottabler", dependencies = TRUE)
+if(!require("devtools")) install.packages("devtools", dependencies = TRUE)
 
 ```
 
@@ -129,9 +117,18 @@ That was a nice set of 16 points... On the bright side we know all possible outc
 
 ggplot(ofsted_filtered) +
   geom_point(mapping = aes(x = Previous.full.inspection.overall.effectiveness, y = Overall.effectiveness), position = "Jitter")
-  
+
 ```
+
 Much better! Now it is quite clear that most schools that were graded 2 previous stay at a two or move up to a 1. Most schools graded 3 moved up to a 2 and even the majority of 4 moved to a 2. There is some backsliding for schools that were 1 slipping back to a 2 but that is still a good outcome. However I would not present this chart to anyone. To make this a bit more user friendly I'm going to have to summarise the data and then produce a stacked bar chart from the outcomes I will produce two of these one will be a straight count the other will be proportion based.
+
+This is a nice way of visualising tables:
+
+```{r}
+
+mosaicplot(xtabs(~ Overall.effectiveness + Previous.full.inspection.overall.effectiveness, data = ofsted_filtered))
+
+```
 
 ```{r Summarise}
 
@@ -140,6 +137,7 @@ Ofsted_outcomes_summed <- ofsted_filtered %>%
     summarise(n())
 
 ```
+
 Now viewing this data we can see that the majority of the data points in the data set are 2-2 and 3-2, and 3-2 is in fact the larger number!
 
 Next up is the first chart, previous outcome inspection vs current inspection as a stacked bar.
@@ -161,6 +159,28 @@ ggplot(ofsted_filtered) +
 
 ```
 This project aims to identify those schools that are currently at any level of overall effectiveness, figure out what they are likely to achieve at their next inspection and then put in intervention to try and squeeze down the size of the 3 and 4 bands by turning them into 1's and 2's.
+
+I moved this code chunk up because it needs to run before the chunk that is now below it.
+
+```{r First prep data ready for the regression test}
+
+# The IDACI part had () as part of the name and that was causing a lot of issues so the following piece of code goes through all the column names of the dataframe and removes punctuation and spaces. Hopefully this is something that can be done earlier on, possibly when the files are read in at some point.
+
+colnames(ofsted_filtered) <- str_replace_all(colnames(ofsted_filtered),"[:punct:]|[:space:]","")
+
+ofsted_filtered <- mutate(ofsted_filtered, prev_out = as.integer(ifelse(Previousfullinspectionoveralleffectiveness == "NULL", -1, Previousfullinspectionoveralleffectiveness)))
+
+ofsted_filtered <- mutate(ofsted_filtered, current_out = as.integer(ifelse(Overalleffectiveness == "NULL", -1, Overalleffectiveness)))
+
+ofsted_filtered <- mutate(ofsted_filtered, IDACI = as.integer(ifelse(TheincomedeprivationaffectingchildrenindexIDACIquintile == "NULL", -1, TheincomedeprivationaffectingchildrenindexIDACIquintile)))
+
+ofsted_filtered <- mutate(ofsted_filtered, num_pupils = as.integer(ifelse(Totalnumberofpupils == "NULL", -1, Totalnumberofpupils)))
+
+ofsted_filtered_reg <- filter(ofsted_filtered, prev_out != -1 & current_out != -1 & IDACI != -1 & num_pupils != -1)
+
+ofsted_filtered_reg <- mutate(ofsted_filtered_reg, pos_out = ifelse(current_out - prev_out <= 0,1,0))
+
+```
 
 It might be a good idea to contrast this chart with that of Warwickshire
 
@@ -189,34 +209,21 @@ As you can see we have a larger proportion of 4's going to 3's than occurs in th
 
 Time to start working on a logistic regression of my dataset. Next we will do a test of logistic regression.
 
-```{r First prep data ready for the regression test}
-
-# The IDACI part had () as part of the name and that was causing a lot of issues so the following piece of code goes through all the column names of the dataframe and removes punctuation and spaces. Hopefully this is something that can be done earlier on, possibly when the files are read in at some point.
-
-colnames(ofsted_filtered) <- str_replace_all(colnames(ofsted_filtered),"[:punct:]|[:space:]","")
-
-ofsted_filtered <- mutate(ofsted_filtered, prev_out = as.integer(ifelse(Previousfullinspectionoveralleffectiveness == "NULL", -1, Previousfullinspectionoveralleffectiveness)))
-
-ofsted_filtered <- mutate(ofsted_filtered, current_out = as.integer(ifelse(Overalleffectiveness == "NULL", -1, Overalleffectiveness)))
-
-ofsted_filtered <- mutate(ofsted_filtered, IDACI = as.integer(ifelse(TheincomedeprivationaffectingchildrenindexIDACIquintile == "NULL", -1, TheincomedeprivationaffectingchildrenindexIDACIquintile)))
-
-ofsted_filtered <- mutate(ofsted_filtered, num_pupils = as.integer(ifelse(Totalnumberofpupils == "NULL", -1, Totalnumberofpupils)))
-
-ofsted_filtered_reg <- filter(ofsted_filtered, prev_out != -1 & current_out != -1 & IDACI != -1 & num_pupils != -1)
-
-ofsted_filtered_reg <- mutate(ofsted_filtered_reg, pos_out = ifelse(current_out - prev_out <= 0,1,0))
-
-```
-
 ```{r Now test the regression}
 
 # ofsted_filtered_reg$prev_out <- as.factor(ofsted_filtered_reg$prev_out)
 ofsted_filtered_reg$Ofstedphase <- as.factor(ofsted_filtered_reg$Ofstedphase)
 
+ofsted_filtered_reg <- ofsted_filtered_reg %>% 
+  mutate(prev_out = factor(prev_out),
+         IDACI = factor(IDACI),
+         Academy = factor(Academy))
+
 logit <- glm(pos_out ~ prev_out + IDACI + Academy + Ofstedphase, data = ofsted_filtered_reg, family = "binomial")
 
 summary(logit)
+
+exp(coef(logit))
 
 # e exponent?
 
