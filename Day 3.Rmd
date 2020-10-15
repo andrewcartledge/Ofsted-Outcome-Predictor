@@ -1,0 +1,356 @@
+---
+title: "Ofsted Outcome Predictor Markdown - Day 3"
+author: "Andy Cartledge"
+date: "18/09/2020"
+output: html_document
+---
+
+```{r Install packages}
+
+# This lists all the packages used in the project, more packages may be added as the project rolls on!
+
+if(!require("tidyverse")) install.packages("tidyverse", dependencies = TRUE)
+if(!require("openxlsx")) install.packages("openxlsx", dependencies = TRUE)
+if(!require("stringr")) install.packages("stringr", dependencies = TRUE)
+if(!require("pivottabler")) install.packages("pivottabler", dependencies = TRUE)
+if(!require("devtools")) install.packages("devtools", dependencies = TRUE)
+if(!require("rpart")) install.packages("rpart", dependencies = TRUE)
+if(!require("rpart.plot")) install.packages("rpart.plot", dependencies = TRUE)
+if(!require("tidymodels")) install.packages("tidymodels", dependencies = TRUE)
+if(!require("broom.mixed")) install.packages("broom.mixed", dependencies = TRUE)
+if(!require("readr")) install.packages("readr", dependencies = TRUE)
+if(!require("rstanarm")) install.packages("rstanarm", dependencies = TRUE)
+if(!require("ranger")) install.packages("ranger", dependencies = TRUE)
+
+```
+
+Then we need to load the packages into memory
+
+```{r Load packages}
+
+library(tidyverse)
+library(openxlsx)
+library(stringr)
+library(pivottabler)
+library(devtools)
+library(rpart)
+library(rpart.plot)
+library(tidymodels)
+library(broom.mixed)
+library(readr)
+library(rstanarm)
+library(ranger)
+
+```
+
+Next I will load the excel file and the csv copy of edubase
+
+```{r Load excel files}
+
+# The data I need is on the 10th sheet and I'm also interested in dates. Also the top row is not the header row for the sheet, hence the different start row.
+
+ofsted <- read.xlsx(
+  "data/Management_information_-_state-funded_schools_-_as_at_31_August_2020.xlsx", 
+  sheet = 10, 
+  startRow = 2, 
+  detectDates = TRUE, 
+  na.strings = "NULL"
+  )
+
+edubase <- read_csv(
+  "data/edubasealldata20200921.csv", 
+  col_types = cols(`SEN13 (name)` = col_skip(), 
+                   FEHEIdentifier = col_skip(), 
+                   InspectorateReport = col_skip(), 
+                   DateOfLastInspectionVisit = col_skip(), 
+                   SiteName = col_skip()
+                   ),
+  guess_max = 10000
+  )
+
+```
+
+Now I create a new table from the edubase dataset. This will contain all the fields I desire from that dataset, it will also create a new
+
+```{r Code some academy's}
+
+edubase_to_ofsted <- select(
+  mutate(
+    edubase, 
+    Academy = ifelse(`EstablishmentTypeGroup (code)` == 10 | `EstablishmentTypeGroup (code)` == 11,1,0)),
+    URN,
+    Easting,
+    Northing,
+    Academy,
+    `DistrictAdministrative (code)`,
+    `DistrictAdministrative (name)`,
+    `LSOA (name)`,
+    `LSOA (code)`
+)
+
+```
+
+```{r Match edubase data to Ofsted to add Academy column}
+
+#This could likely be done within the ofsted data itself and I will attempt this after matching the data together
+
+ofsted <- left_join(x = ofsted, y = edubase_to_ofsted, x.URN = y.URN)
+
+```
+
+```{r Add in LA code}
+
+ofsted <- mutate(ofsted, LA.Code = as.integer(substr(LAESTAB,1,3)))
+
+```
+
+```{r Add in difference between inspection dates difference}
+
+ofsted <- ofsted %>%
+  mutate(days_between = Publication.date - Previous.publication.date)
+
+```
+
+Now that we have added the columns need from the edubase dataset we can now move onto an important step, removing schools which do not have a previous inspection. This will, most likely, be due to them being newly opened schools. Note that Ofsted recently changed its methodology to map new academys records to their predecessor schools records. However Free Schools and the like that do not have a predecessor school will not have this data. Since the idea of this project is to map likely outcomes for schools based on current and previous inspection data for the most part then I will filter these schools without prior outcomes from the dataset
+
+```{r Filter out those without previous inspections}
+
+(ofsted_filtered <- filter(ofsted, !is.na(Previous.full.inspection.overall.effectiveness)))
+
+```
+
+```{r First prep data ready for the regression test}
+
+# The IDACI part had () as part of the name and that was causing a lot of issues so the following piece of code goes through all the column names of the dataframe and removes punctuation and spaces. Hopefully this is something that can be done earlier on, possibly when the files are read in at some point.
+
+colnames(ofsted_filtered) <- str_replace_all(colnames(ofsted_filtered),"[:punct:]|[:space:]","")
+
+ofsted_filtered <- mutate(ofsted_filtered, prev_out = as.integer(ifelse(Previousfullinspectionoveralleffectiveness == "NULL", -1, Previousfullinspectionoveralleffectiveness)))
+
+ofsted_filtered <- mutate(ofsted_filtered, current_out = as.integer(ifelse(Overalleffectiveness == "NULL", -1, Overalleffectiveness)))
+
+ofsted_filtered <- mutate(ofsted_filtered, IDACI = as.integer(ifelse(TheincomedeprivationaffectingchildrenindexIDACIquintile == "NULL", -1, TheincomedeprivationaffectingchildrenindexIDACIquintile)))
+
+ofsted_filtered <- mutate(ofsted_filtered, num_pupils = as.integer(ifelse(Totalnumberofpupils == "NULL", -1, Totalnumberofpupils)))
+
+```
+
+```{r Tree based regression test}
+
+tree_test <- data_frame(ofsted_filtered_reg_tree)
+
+tree <- rpart(current_out ~ prev_out, data = tree_test, method = "class")
+
+printcp(tree)
+plotcp(tree)
+rsq.rpart(tree)
+print(tree)
+summary(tree)
+plot(tree)
+text(tree)
+
+```
+
+```{r Tree test 2!}
+
+ofsted_tree_root <- ofsted_filtered %>%
+  select(LAESTAB, Ofstedphase, Localauthority, Easting, Northing, Academy, DistrictAdministrativecode, LSOAcode, LACode, prev_out, current_out, IDACI, num_pupils)
+
+ofsted_tree_root <- ofsted_tree_root %>% 
+  mutate(prev_out = factor(prev_out),
+         curr_out = factor(current_out),
+         Ofstedphase = factor(Ofstedphase),
+         IDACI = factor(IDACI),
+         Academy = factor(Academy))
+
+ofsted_tree_root <- ofsted_tree_root %>%
+  filter(!(is.na(IDACI)) & !(is.na(num_pupils)))
+
+ofsted_tree_sprout <- ofsted_tree_root %>%
+  select(prev_out, curr_out, Ofstedphase, Academy, IDACI, num_pupils)
+
+set.seed(061183)
+
+ofsted_split <- initial_split(ofsted_tree_sprout, strata = prev_out)
+
+ofsted_train <- training(ofsted_split)
+
+ofsted_test <- testing(ofsted_split)
+
+
+
+set.seed(310188)
+
+ofsted_boot <- bootstraps(ofsted_train)
+ofsted_boot
+
+log_reg_mod <- logistic_reg() %>%
+  set_engine("glm")
+
+rf_mod <- rand_forest() %>%
+  set_mode("classification") %>%
+  set_engine("ranger")
+
+
+
+ofsted_wf <- workflow() %>%
+  add_formula(curr_out ~ .)
+
+ofsted_wf
+
+
+
+log_res_results <- ofsted_wf %>%
+  add_model(log_reg_mod) %>%
+  fit_resamples(
+    resamples = ofsted_boot,
+    control = control_resamples(save_pred = TRUE, verbose = TRUE)
+  )
+
+rf_results <- ofsted_wf %>%
+  add_model(rf_mod) %>%
+  fit_resamples(
+    resamples = ofsted_boot,
+    control = control_resamples(save_pred = TRUE, verbose = TRUE)
+  )
+
+
+
+out <- collect_metrics(rf_results)
+
+view(out)
+
+out2 <- rf_results %>%
+  conf_mat_resampled()
+
+view(out2)
+
+rf_results %>%
+  collect_predictions() %>%
+  group_by(id) %>%
+  roc_curve(curr_out, c(.pred_1, .pred_2, .pred_3, .pred_4)) %>%
+  ggplot(aes(1 - specificity, sensitivity, color = id)) +
+  geom_abline(lty = 2, color = "gray80", size = 1.5) +
+  geom_path(show.legend = FALSE, alpha = 0.6, size = 1.2) +
+  coord_equal()
+
+
+
+ofsted_tree_leaves <- ofsted_wf %>%
+  add_model(rf_mod) %>%
+  last_fit(ofsted_split)
+
+ofsted_tree_leaves
+
+
+
+```
+
+That was interesting but I want to do it again with different variables - in particular two new one binary ones. prev_good will be Y if the previous outcome was a 1 or 2 and N otherwise. curr_good will be set using the same methodology.
+
+```{r Tree test 3!}
+
+ofsted_tree_root <- ofsted_filtered %>%
+  select(LAESTAB, Ofstedphase, Localauthority, Easting, Northing, Academy, DistrictAdministrativecode, LSOAcode, LACode, prev_out, current_out, IDACI, num_pupils)
+
+ofsted_tree_root <- ofsted_tree_root %>% 
+  mutate(prev_out = factor(prev_out),
+         curr_out = factor(current_out),
+         Ofstedphase = factor(Ofstedphase),
+         IDACI = factor(IDACI),
+         Academy = factor(Academy))
+
+ofsted_tree_root <- ofsted_tree_root %>%
+  filter(!(is.na(IDACI)) & !(is.na(num_pupils)))
+
+ofsted_tree_root <- ofsted_tree_root %>%
+  mutate(prev_good = ifelse(prev_out == "1" | prev_out == "2", "Y", "N"), 
+         curr_good = ifelse(curr_out == "1" | curr_out == "2", "Y", "N"))
+
+ofsted_tree_root <- ofsted_tree_root %>%
+  mutate(prev_good = factor(prev_good), curr_good = factor(curr_good))
+
+
+ofsted_tree_sprout <- ofsted_tree_root %>%
+  select(prev_good, curr_good, Ofstedphase, Academy, IDACI, num_pupils)
+
+set.seed(061183)
+
+ofsted_split <- initial_split(ofsted_tree_sprout, strata = prev_good)
+
+ofsted_train <- training(ofsted_split)
+
+ofsted_test <- testing(ofsted_split)
+
+
+
+set.seed(310188)
+
+ofsted_boot <- bootstraps(ofsted_train)
+ofsted_boot
+
+log_reg_mod <- logistic_reg() %>%
+  set_engine("glm")
+
+rf_mod <- rand_forest() %>%
+  set_mode("classification") %>%
+  set_engine("ranger")
+
+
+
+ofsted_wf <- workflow() %>%
+  add_formula(curr_good ~ .)
+
+ofsted_wf
+
+
+
+log_res_results <- ofsted_wf %>%
+  add_model(log_reg_mod) %>%
+  fit_resamples(
+    resamples = ofsted_boot,
+    control = control_resamples(save_pred = TRUE, verbose = TRUE)
+  )
+
+rf_results <- ofsted_wf %>%
+  add_model(rf_mod) %>%
+  fit_resamples(
+    resamples = ofsted_boot,
+    control = control_resamples(save_pred = TRUE, verbose = TRUE)
+  )
+
+outlog <- collect_metrics(log_res_results)
+
+out <- collect_metrics(rf_results)
+
+view(out)
+
+out2 <- rf_results %>%
+  conf_mat_resampled()
+
+view(out2)
+
+rf_results %>%
+  collect_predictions() %>%
+  group_by(id) %>%
+  roc_curve(curr_good, .pred_N) %>%
+  ggplot(aes(1 - specificity, sensitivity, color = id)) +
+  geom_abline(lty = 2, color = "gray80", size = 1.5) +
+  geom_path(show.legend = FALSE, alpha = 0.6, size = 1.2) +
+  coord_equal()
+
+
+
+ofsted_tree_leaves <- ofsted_wf %>%
+  add_model(rf_mod) %>%
+  last_fit(ofsted_split)
+
+ofsted_tree_leaves
+
+collect_metrics(ofsted_tree_leaves)
+
+
+
+```
+
+Results between the two variables are very similar but not as close to a good match as I'd like.
