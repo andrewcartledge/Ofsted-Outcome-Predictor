@@ -5,9 +5,19 @@ date: "18/09/2020"
 output: html_document
 ---
 
-```{r Install packages}
+```{r Install packages, include=FALSE}
+
+# get rid of all the junk from the output
+
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+
+# note that R will complain about the space in the filename
+# it's best to rename the file but if I do that it will mess up
+# the Git changes
 
 # This lists all the packages used in the project, more packages may be added as the project rolls on!
+
+# you don't need to load the libraries after this, require() does that for you
 
 if(!require("tidyverse")) install.packages("tidyverse", dependencies = TRUE)
 if(!require("openxlsx")) install.packages("openxlsx", dependencies = TRUE)
@@ -21,25 +31,7 @@ if(!require("broom.mixed")) install.packages("broom.mixed", dependencies = TRUE)
 if(!require("readr")) install.packages("readr", dependencies = TRUE)
 if(!require("rstanarm")) install.packages("rstanarm", dependencies = TRUE)
 if(!require("ranger")) install.packages("ranger", dependencies = TRUE)
-
-```
-
-Then we need to load the packages into memory
-
-```{r Load packages}
-
-library(tidyverse)
-library(openxlsx)
-library(stringr)
-library(pivottabler)
-library(devtools)
-library(rpart)
-library(rpart.plot)
-library(tidymodels)
-library(broom.mixed)
-library(readr)
-library(rstanarm)
-library(ranger)
+if(!require("knitr")) install.packages("ranger", dependencies = TRUE)
 
 ```
 
@@ -72,7 +64,9 @@ edubase <- read_csv(
 
 Now I create a new table from the edubase dataset. This will contain all the fields I desire from that dataset, it will also create a new
 
-```{r Code some academy's}
+```{r Code some academies}
+
+# doesn't like apostrophes in code chunk labels, I didn't know that one
 
 edubase_to_ofsted <- select(
   mutate(
@@ -115,7 +109,7 @@ Now that we have added the columns need from the edubase dataset we can now move
 
 ```{r Filter out those without previous inspections}
 
-(ofsted_filtered <- filter(ofsted, !is.na(Previous.full.inspection.overall.effectiveness)))
+ofsted_filtered <- filter(ofsted, !is.na(Previous.full.inspection.overall.effectiveness))
 
 ```
 
@@ -137,17 +131,20 @@ ofsted_filtered <- mutate(ofsted_filtered, num_pupils = as.integer(ifelse(Totaln
 
 ```{r Tree based regression test}
 
-tree_test <- data_frame(ofsted_filtered_reg_tree)
+tree_test <- data_frame(ofsted_filtered) # couldn't find ofsted_filtered_reg_tree 
+                                         # so changed it to this
 
 tree <- rpart(current_out ~ prev_out, data = tree_test, method = "class")
 
-printcp(tree)
-plotcp(tree)
-rsq.rpart(tree)
-print(tree)
-summary(tree)
-plot(tree)
-text(tree)
+# these don't output nicely so I've removed them
+
+# printcp(tree)
+# plotcp(tree)
+# rsq.rpart(tree)
+# print(tree)
+# summary(tree)
+# plot(tree)
+# text(tree)
 
 ```
 
@@ -214,16 +211,24 @@ rf_results <- ofsted_wf %>%
     control = control_resamples(save_pred = TRUE, verbose = TRUE)
   )
 
-
-
 out <- collect_metrics(rf_results)
 
-view(out)
+# view(out)
+
+```
+
+```{r, results = "asis"}
+
+# I've added some results = "asis" chunks to make the output print nicely
+
+out %>% 
+  kable()
 
 out2 <- rf_results %>%
   conf_mat_resampled()
 
-view(out2)
+out2 %>% 
+  kable()
 
 rf_results %>%
   collect_predictions() %>%
@@ -241,8 +246,6 @@ ofsted_tree_leaves <- ofsted_wf %>%
   last_fit(ofsted_split)
 
 ofsted_tree_leaves
-
-
 
 ```
 
@@ -323,12 +326,18 @@ outlog <- collect_metrics(log_res_results)
 
 out <- collect_metrics(rf_results)
 
-view(out)
+```
+
+```{r, results = "asis"}
+
+out %>% 
+  kable()
 
 out2 <- rf_results %>%
   conf_mat_resampled()
 
-view(out2)
+out2 %>% 
+  kable()
 
 rf_results %>%
   collect_predictions() %>%
@@ -347,7 +356,8 @@ ofsted_tree_leaves <- ofsted_wf %>%
 
 ofsted_tree_leaves
 
-collect_metrics(ofsted_tree_leaves)
+collect_metrics(ofsted_tree_leaves) %>% 
+  kable()
 
 
 
