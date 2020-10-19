@@ -31,7 +31,7 @@ if(!require("broom.mixed")) install.packages("broom.mixed", dependencies = TRUE)
 if(!require("readr")) install.packages("readr", dependencies = TRUE)
 if(!require("rstanarm")) install.packages("rstanarm", dependencies = TRUE)
 if(!require("ranger")) install.packages("ranger", dependencies = TRUE)
-if(!require("knitr")) install.packages("ranger", dependencies = TRUE)
+if(!require("knitr")) install.packages("knitr", dependencies = TRUE)
 
 ```
 
