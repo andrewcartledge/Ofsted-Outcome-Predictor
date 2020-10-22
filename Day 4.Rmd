@@ -391,8 +391,34 @@ test <- ofsted_filtered %>%
          curr_good = ifelse(curr_out == "1" | curr_out == "2", "Y", "N")) %>%
   select(prev_good, curr_good, Ofstedphase, Academy, IDACI, num_pupils)
 
+```
 
+```{r}
 
-predict(rf_results, new_data = test)
+rf_model <- rand_forest(trees = 100, mode = "classification") %>%
+
+   set_engine("ranger") %>%
+
+   fit(curr_good ~ ., data = ofsted_tree_sprout)
+ 
+predict(rf_model, test, type = "prob")
+
+test2 <- ofsted_filtered %>%
+  mutate(prev_out = factor(prev_out),
+         curr_out = factor(current_out),
+         Ofstedphase = factor(Ofstedphase),
+         IDACI = factor(IDACI),
+         Academy = factor(Academy),
+         prev_good = ifelse(prev_out == "1" | prev_out == "2", "Y", "N"), 
+         curr_good = ifelse(curr_out == "1" | curr_out == "2", "Y", "N")) %>%
+  select(prev_good, curr_good, Ofstedphase, Academy, IDACI, num_pupils) %>%
+  filter(!(is.na(IDACI)) & !(is.na(num_pupils)))
+  
+
+test_outcome <- predict(rf_model, test2, type = "prob")
+
+predict(rf_model, test2, type = "raw")
+
+print(rf_model)
 
 ```
