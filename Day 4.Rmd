@@ -1,5 +1,5 @@
 ---
-title: "Ofsted Outcome Predictor Markdown - Day 3"
+title: "Ofsted Outcome Predictor Markdown - Day 4"
 author: "Andy Cartledge"
 date: "18/09/2020"
 output: html_document
@@ -378,7 +378,12 @@ ofsted_tree_leaves %>%
 
 
 ```
-```{r test prediction models}
+
+Now to test the predictions and extract probabilities
+
+```{r First set up test data}
+
+# 1 row of data
 
 test <- ofsted_filtered %>%
   filter(LAESTAB == 3594026) %>%
@@ -391,17 +396,7 @@ test <- ofsted_filtered %>%
          curr_good = ifelse(curr_out == "1" | curr_out == "2", "Y", "N")) %>%
   select(prev_good, curr_good, Ofstedphase, Academy, IDACI, num_pupils)
 
-```
-
-```{r}
-
-rf_model <- rand_forest(trees = 100, mode = "classification") %>%
-
-   set_engine("ranger") %>%
-
-   fit(curr_good ~ ., data = ofsted_tree_sprout)
- 
-predict(rf_model, test, type = "prob")
+# Full dataset
 
 test2 <- ofsted_filtered %>%
   mutate(prev_out = factor(prev_out),
@@ -413,12 +408,32 @@ test2 <- ofsted_filtered %>%
          curr_good = ifelse(curr_out == "1" | curr_out == "2", "Y", "N")) %>%
   select(prev_good, curr_good, Ofstedphase, Academy, IDACI, num_pupils) %>%
   filter(!(is.na(IDACI)) & !(is.na(num_pupils)))
-  
-
-test_outcome <- predict(rf_model, test2, type = "prob")
-
-predict(rf_model, test2, type = "raw")
-
-print(rf_model)
 
 ```
+
+```{r test against a random tree}
+
+rf_model <- rand_forest(trees = 100, mode = "classification") %>%
+
+   set_engine("ranger") %>%
+
+   fit(curr_good ~ ., data = ofsted_tree_sprout)
+
+test_rf_outcome <- predict(rf_model, test, type = "prob")
+
+test2_rf_outcome <- predict(rf_model, test2, type = "prob")
+
+```
+
+```{r Test log reg model}
+
+log_res_model <- ofsted_wf %>%
+  add_model(log_reg_mod) %>%
+  fit(data = ofsted_tree_sprout)
+
+test_log_outcome <- predict(log_res_model, test, type = "prob")
+
+test2_log_outcome <- predict(log_res_model, test2, type = "prob")
+
+```
+
