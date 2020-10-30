@@ -389,6 +389,112 @@ ofsted_tree_leaves
 
 
 ```
+That was interesting but I want to do it again with a different variable
+
+```{r Tree test 3!}
+
+ofsted_tree_root <- ofsted_filtered %>%
+  select(LAESTAB, Ofstedphase, Localauthority, Easting, Northing, Academy, DistrictAdministrativecode, LSOAcode, LACode, prev_out, current_out, IDACI, num_pupils)
+
+ofsted_tree_root <- ofsted_tree_root %>% 
+  mutate(prev_out = factor(prev_out),
+         curr_out = factor(current_out),
+         Ofstedphase = factor(Ofstedphase),
+         IDACI = factor(IDACI),
+         Academy = factor(Academy))
+
+ofsted_tree_root <- ofsted_tree_root %>%
+  filter(!(is.na(IDACI)) & !(is.na(num_pupils)))
+
+ofsted_tree_root <- ofsted_tree_root %>%
+  mutate(prev_good = ifelse(prev_out == "1" | prev_out == "2", "Y", "N"), 
+         curr_good = ifelse(curr_out == "1" | curr_out == "2", "Y", "N"))
+
+ofsted_tree_root <- ofsted_tree_root %>%
+  mutate(prev_good = factor(prev_good), curr_good = factor(curr_good))
+
+
+ofsted_tree_sprout <- ofsted_tree_root %>%
+  select(prev_good, curr_good, Ofstedphase, Academy, IDACI, num_pupils)
+
+set.seed(061183)
+
+ofsted_split <- initial_split(ofsted_tree_sprout, strata = prev_good)
+
+ofsted_train <- training(ofsted_split)
+
+ofsted_test <- testing(ofsted_split)
+
+
+
+set.seed(310188)
+
+ofsted_boot <- bootstraps(ofsted_train)
+ofsted_boot
+
+log_reg_mod <- logistic_reg() %>%
+  set_engine("glm")
+
+rf_mod <- rand_forest() %>%
+  set_mode("classification") %>%
+  set_engine("ranger")
+
+
+
+ofsted_wf <- workflow() %>%
+  add_formula(curr_good ~ .)
+
+ofsted_wf
+
+
+
+log_res_results <- ofsted_wf %>%
+  add_model(log_reg_mod) %>%
+  fit_resamples(
+    resamples = ofsted_boot,
+    control = control_resamples(save_pred = TRUE, verbose = TRUE)
+  )
+
+rf_results <- ofsted_wf %>%
+  add_model(rf_mod) %>%
+  fit_resamples(
+    resamples = ofsted_boot,
+    control = control_resamples(save_pred = TRUE, verbose = TRUE)
+  )
+
+outlog <- collect_metrics(log_res_results)
+
+out <- collect_metrics(rf_results)
+
+view(out)
+
+out2 <- rf_results %>%
+  conf_mat_resampled()
+
+view(out2)
+
+rf_results %>%
+  collect_predictions() %>%
+  group_by(id) %>%
+  roc_curve(curr_good, .pred_N) %>%
+  ggplot(aes(1 - specificity, sensitivity, color = id)) +
+  geom_abline(lty = 2, color = "gray80", size = 1.5) +
+  geom_path(show.legend = FALSE, alpha = 0.6, size = 1.2) +
+  coord_equal()
+
+
+
+ofsted_tree_leaves <- ofsted_wf %>%
+  add_model(rf_mod) %>%
+  last_fit(ofsted_split)
+
+ofsted_tree_leaves
+
+collect_metrics(ofsted_tree_leaves)
+
+
+
+```
 
 
 ```{r The fun zone! For tests and giggles!}

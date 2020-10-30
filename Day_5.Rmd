@@ -1,0 +1,291 @@
+---
+title: "Ofsted Outcome Predictor Markdown - Day 5"
+author: "Andy Cartledge"
+date: "18/09/2020"
+output: html_document
+---
+
+Install packages
+
+```{r Install packages, include=FALSE}
+
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+
+# note that R will complain about the space in the filename
+# it's best to rename the file but if I do that it will mess up
+# the Git changes
+
+# This lists all the packages used in the project, more packages may be added as the project rolls on!
+
+if(!require("tidyverse")) install.packages("tidyverse", dependencies = TRUE)
+if(!require("openxlsx")) install.packages("openxlsx", dependencies = TRUE)
+if(!require("stringr")) install.packages("stringr", dependencies = TRUE)
+if(!require("pivottabler")) install.packages("pivottabler", dependencies = TRUE)
+if(!require("devtools")) install.packages("devtools", dependencies = TRUE)
+if(!require("rpart")) install.packages("rpart", dependencies = TRUE)
+if(!require("rpart.plot")) install.packages("rpart.plot", dependencies = TRUE)
+if(!require("tidymodels")) install.packages("tidymodels", dependencies = TRUE)
+if(!require("broom.mixed")) install.packages("broom.mixed", dependencies = TRUE)
+if(!require("readr")) install.packages("readr", dependencies = TRUE)
+if(!require("rstanarm")) install.packages("rstanarm", dependencies = TRUE)
+if(!require("ranger")) install.packages("ranger", dependencies = TRUE)
+if(!require("knitr")) install.packages("knitr", dependencies = TRUE)
+
+```
+
+Load data
+
+```{r Load excel files}
+
+# The data I need is on the 10th sheet and I'm also interested in dates. Also the top row is not the header row for the sheet, hence the different start row.
+
+ofsted <- read.xlsx(
+  "data/Management_information_-_state-funded_schools_-_as_at_31_August_2020.xlsx", 
+  sheet = 10, 
+  startRow = 2, 
+  detectDates = TRUE, 
+  na.strings = "NULL"
+  )
+
+edubase <- read_csv(
+  "data/edubasealldata20200921.csv", 
+  col_types = cols(`SEN13 (name)` = col_skip(), 
+                   FEHEIdentifier = col_skip(), 
+                   InspectorateReport = col_skip(), 
+                   DateOfLastInspectionVisit = col_skip(), 
+                   SiteName = col_skip()
+                   ),
+  guess_max = 10000
+  )
+
+```
+
+Subset edubase
+
+```{r Code some academies}
+
+edubase_to_ofsted <- select(
+  mutate(
+    edubase, 
+    Academy = ifelse(`EstablishmentTypeGroup (code)` == 10 | `EstablishmentTypeGroup (code)` == 11,1,0)),
+    URN,
+    Easting,
+    Northing,
+    Academy,
+    `DistrictAdministrative (code)`,
+    `DistrictAdministrative (name)`,
+    `LSOA (name)`,
+    `LSOA (code)`
+)
+
+```
+
+Join to ofsted
+
+```{r Match edubase data to Ofsted to add Academy column}
+
+ofsted <- left_join(x = ofsted, y = edubase_to_ofsted, x.URN = y.URN)
+
+```
+
+Add in columns to ofsted dataset
+
+```{r Add in LA code}
+
+ofsted <- mutate(ofsted, LA.Code = as.integer(substr(LAESTAB,1,3)))
+
+ofsted <- ofsted %>%
+  mutate(days_between = Publication.date - Previous.publication.date)
+
+```
+
+Filter down to just those that have a previous inspection
+
+```{r Filter out those without previous inspections}
+
+ofsted_filtered <- filter(ofsted, !is.na(Previous.full.inspection.overall.effectiveness))
+
+```
+
+Clean up column names
+
+```{r Column clean up}
+
+# The IDACI part had () as part of the name and that was causing a lot of issues so the following piece of code goes through all the column names of the dataframe and removes punctuation and spaces. Hopefully this is something that can be done earlier on, possibly when the files are read in at some point.
+
+colnames(ofsted_filtered) <- str_replace_all(colnames(ofsted_filtered),"[:punct:]|[:space:]","")
+
+ofsted_filtered <- mutate(ofsted_filtered, prev_out = as.integer(ifelse(Previousfullinspectionoveralleffectiveness == "NULL", -1, Previousfullinspectionoveralleffectiveness)))
+
+ofsted_filtered <- mutate(ofsted_filtered, curr_out = as.integer(ifelse(Overalleffectiveness == "NULL", -1, Overalleffectiveness)))
+
+ofsted_filtered <- mutate(ofsted_filtered, IDACI = as.integer(ifelse(TheincomedeprivationaffectingchildrenindexIDACIquintile == "NULL", -1, TheincomedeprivationaffectingchildrenindexIDACIquintile)))
+
+ofsted_filtered <- mutate(ofsted_filtered, num_pupils = as.integer(ifelse(Totalnumberofpupils == "NULL", -1, Totalnumberofpupils)))
+
+```
+
+Reduce data down to just the key columns
+
+```{r Column reduction}
+
+ofsted_filtered <- ofsted_filtered %>%
+  select(LAESTAB, Ofstedphase, Easting, Northing, Academy, DistrictAdministrativecode, LSOAcode, LACode, prev_out, curr_out, IDACI, num_pupils)
+
+```
+
+Convert columns to factors
+
+```{r Factorise}
+
+ofsted_filtered <- ofsted_filtered %>% 
+  mutate(prev_out = factor(prev_out),
+         curr_out = factor(curr_out),
+         Ofstedphase = factor(Ofstedphase),
+         IDACI = factor(IDACI),
+         Academy = factor(Academy))
+
+```
+
+Remove those where the IDACI or number of pupils is null
+
+```{r Filtering again}
+
+ofsted_filtered <- ofsted_filtered %>%
+  filter(!(is.na(IDACI)) & !(is.na(num_pupils)))
+
+```
+
+Finally add flags for whether the previous and current inspections were at least good
+
+```{r At least good flag}
+
+ofsted_filtered <- ofsted_filtered %>%
+  mutate(prev_good = ifelse(prev_out == "1" | prev_out == "2", "Y", "N"), 
+         curr_good = ifelse(curr_out == "1" | curr_out == "2", "Y", "N")) %>%
+  mutate(prev_good = factor(prev_good), curr_good = factor(curr_good))
+
+```
+
+Today I am going to be (hopefully) creating the main table that I want to use for my final map. I will take another copy of the Warwickshire schools data remove the previous inspection outcome column and then rename the Current Overall effectiveness column with the removed columns name.
+
+```{r Copy of Warwickshire for the future}
+
+warwickshire_future <- ofsted_filtered %>%
+  filter(LACode == 937) %>%
+  select(-prev_out, -prev_good) %>%
+  rename(prev_out = curr_out) %>%
+  rename(prev_good = curr_good) %>%
+  add_column(curr_good = NA) %>%
+  mutate(curr_good = as.factor(curr_good))
+
+```
+
+Remove the curr_out field as this shouldn't be used to predict outcomes
+
+```{r Remove curr_out}
+
+ofsted_filtered_model <- ofsted_filtered %>%
+  select(-curr_out)
+
+```
+
+Create model(s)
+
+```{r Random tree}
+
+rf_model <- rand_forest(trees = 100, mode = "classification") %>%
+   set_engine("ranger") %>%
+   fit(curr_good ~ ., data = ofsted_filtered_model)
+
+```
+
+```{r Logistic regression}
+
+# This part doesn't work!
+
+log_reg_mod <- logistic_reg() %>%
+  set_engine("glm") %>%
+  set_mode("classification")
+
+ofsted_wf <- workflow() %>%
+  add_formula(curr_good ~ .)
+
+log_reg_model <- ofsted_wf %>%
+  add_model(log_reg_mod) %>%
+  fit(data = ofsted_filtered_model)
+
+```
+
+Test models
+
+```{r Create test data}
+
+test <- ofsted_filtered %>%
+  filter(LAESTAB == 3594026) %>%
+  mutate(prev_out = factor(prev_out),
+         curr_out = factor(curr_out),
+         Ofstedphase = factor(Ofstedphase),
+         IDACI = factor(IDACI),
+         Academy = factor(Academy),
+         prev_good = ifelse(prev_out == "1" | prev_out == "2", "Y", "N"), 
+         curr_good = ifelse(curr_out == "1" | curr_out == "2", "Y", "N")) %>%
+  mutate(prev_good = factor(prev_good),
+         curr_good = factor(curr_good)) %>%
+  select(LAESTAB, Ofstedphase, Easting, Northing, Academy, DistrictAdministrativecode, LSOAcode, LACode, prev_out, IDACI, num_pupils, prev_good, curr_good)
+
+```
+
+
+```{r Testing the models - Random Tree - 1 line}
+
+test_rf_outcome <- predict(rf_model, test, type = "prob")
+
+```
+
+```{r Completing the Random Tree modelling}
+
+model_rf_outcome <- predict(rf_model, warwickshire_future, type = "prob")
+
+```
+
+```{r Combine predictions to original data}
+
+warwickshire_map_output <- bind_cols(warwickshire_future, model_rf_outcome)
+
+```
+
+```{r Tidy up a bit}
+
+warwickshire_map_output <- warwickshire_map_output %>%
+  rename(bad_out_chance = .pred_N) %>%
+  rename(good_out_chance = .pred_Y)
+
+```
+
+```{r Subset ofsted data and then merge together}
+
+ofsted_rejoin <- ofsted %>%
+  select(URN, LAESTAB, School.name, Type.of.education, Region, Local.authority, Publication.date, Overall.effectiveness, Previous.publication.date, Previous.full.inspection.overall.effectiveness, days_between)
+
+colnames(ofsted_rejoin) <- str_replace_all(colnames(ofsted_rejoin),"[:punct:]|[:space:]","")
+  
+warwickshire_map_output <- warwickshire_map_output %>%
+  select(LAESTAB, Ofstedphase, Easting, Northing, Academy, DistrictAdministrativecode, LSOAcode, LACode, IDACI, num_pupils, bad_out_chance, good_out_chance)
+
+warwickshire_map_output <- left_join(x = warwickshire_map_output, y = ofsted_rejoin, x.LAESTAB = y.LAESTAB)
+
+```
+
+
+```{r Write output to csv}
+
+write.csv(warwickshire_map_output, file = "C:/Users/acar3/OneDrive - Warwickshire County Council/Desktop/Data Science Accelerator/Ofsted Outcome Predictor/Ofsted-Outcome-Predictor/data/Inspection Outcome Map Data.csv")
+
+```
+
+
+test_log_outcome <- predict(log_res_model, test, type = "prob")
+
+test2_log_outcome <- predict(log_res_model, test2, type = "prob")
+
