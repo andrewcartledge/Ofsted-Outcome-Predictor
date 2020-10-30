@@ -30,6 +30,7 @@ if(!require("readr")) install.packages("readr", dependencies = TRUE)
 if(!require("rstanarm")) install.packages("rstanarm", dependencies = TRUE)
 if(!require("ranger")) install.packages("ranger", dependencies = TRUE)
 if(!require("knitr")) install.packages("knitr", dependencies = TRUE)
+if(!require("skimr")) install.packages("skimr", dependencies = TRUE)
 
 ```
 
@@ -130,7 +131,21 @@ Reduce data down to just the key columns
 ```{r Column reduction}
 
 ofsted_filtered <- ofsted_filtered %>%
-  select(LAESTAB, Ofstedphase, Easting, Northing, Academy, DistrictAdministrativecode, LSOAcode, LACode, prev_out, curr_out, IDACI, num_pupils)
+  select(LAESTAB, Ofstedphase, Easting, Northing, Academy, DistrictAdministrativecode, 
+         LSOAcode, LACode, prev_out, curr_out, IDACI, num_pupils)
+
+# this will help you to whittle down your variables- you have some problems
+
+skim(ofsted_filtered)
+
+# LAESTAB- I'm not sure what this is. It's a very big number?
+# LSOAcode- There are 15,000 unique values for this, which is way too many
+# LACode- this is being treated as numeric. It is also very numerous, maybe better to exlcude
+# DistrictAdministrativecode- 317 unique values of this
+# Easting and Northing- do you really think that there is a linear relationship
+# between how north/ east something is and the probability? Possible but unlikely
+
+# I remove these variables further down
 
 ```
 
@@ -186,7 +201,8 @@ Remove the curr_out field as this shouldn't be used to predict outcomes
 ```{r Remove curr_out}
 
 ofsted_filtered_model <- ofsted_filtered %>%
-  select(-curr_out)
+  select(-curr_out, -LAESTAB, -LSOAcode, -LACode, -DistrictAdministrativecode,
+         -Easting, -Northing)
 
 ```
 
@@ -202,7 +218,7 @@ rf_model <- rand_forest(trees = 100, mode = "classification") %>%
 
 ```{r Logistic regression}
 
-# This part doesn't work!
+# This part works with the reduced dataset
 
 log_reg_mod <- logistic_reg() %>%
   set_engine("glm") %>%
