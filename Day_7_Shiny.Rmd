@@ -1,0 +1,29 @@
+---
+title: "Day_7_Shiny"
+author: "Andy Cartledge"
+date: "12/11/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+```{r Install packages}
+
+install.packages(c(
+  "gapminder", "ggforce", "globals", "openintro", "shiny", 
+  "shinycssloaders", "shinyFeedback", "shinythemes", "testthat", 
+  "thematic", "tidyverse", "vroom", "waiter", "xml2", "zeallot", "shinyWidgets" 
+))
+
+```
+
+```{r Load into library}
+
+library(shiny)
+
+```
+
