@@ -4,42 +4,47 @@ library(tidyverse)
 
 ofsted_map <- read_csv(
     "data/Inspection Outcome Map Data - Logistic Regression.csv"
-)
+    )
 
-sec <- "Secondary"
+phase_list <- unique(ofsted_map$Ofstedphase)
+outcome_list <- unique(ofsted_map$prev_good)
+max_schools <-nrow(ofsted_map)
 
 ui <- fluidPage(
     sidebarLayout(
         sidebarPanel(
-            selectInput("phase", "Select school phase(s)", c("All", ofsted_map$Ofstedphase), selected = "All", multiple = TRUE),
-            selectInput("outcome", "Select current ofsted outcome group", c("Both", ofsted_map$prev_good), selected = "Both", multiple = TRUE),
-            sliderInput("poorschools", "Select how many at risk schools to display", min = 0, max = 200, value = 20)
-            # selectInput("testing", "Test filtering", choices = c("ofsted_map$Ofstedphase == sec", "ofsted_map$Academy == 1", 
-                                                                 # "ofsted_map$bad_out_chance <= 10"), selected = "ofsted_map$Ofstedphase == sec")
+            selectInput("phase", "Select school phase(s)", ofsted_map$Ofstedphase, selected = phase_list, multiple = TRUE),
+            selectInput("outcome", "Select current ofsted outcome group", ofsted_map$prev_good, selected = outcome_list, multiple = TRUE),
+            sliderInput("poorschools", "Select how many at risk schools to display", min = 0, max = max_schools, value = 20)
         ),
         mainPanel(
-            textOutput("testing"),
+            textOutput("test"),
             tableOutput("datatable")
         )
     )
 )
 
-server <- function(input, output) {
-    output$testing <- renderText({input$phase})
+server <- function(input, output, session) {
     
-    # filter_string <- reactive({input$testing})
-
     map_table <- reactive({
-        if ("All" %in% input$phase)
-        {filter(ofsted_map, ofsted_map$Ofstedphase %like% "%%")}
-        else
-        {filter(ofsted_map, ofsted_map$Ofstedphase %in% input$phase)}
-    })
+        temp_map <- ofsted_map
         
-    # map_table <- reactive(ofsted_map %>%
-    #         filter(ofsted_map$Ofstedphase == input$phase)
-    # )
+        if (isTruthy(input$phase))
+            {temp_map <- temp_map %>%
+            filter(temp_map$Ofstedphase %in% input$phase)}
+        
+        if (isTruthy(input$outcome))
+            {temp_map <- temp_map %>%
+            filter(temp_map$prev_good %in% input$outcome)}
+        
+    })
     
+    sliderupdate <- reactive({
+        max_schools = nrow(map_table)
+        updateSliderInput(session, "poorschools", max = max_schools)
+    })
+
+    output$test <- renderText(max_schools)
     output$datatable <- renderTable(map_table())
     
 }
