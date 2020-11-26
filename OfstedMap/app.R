@@ -21,7 +21,35 @@ library(sp)
 
 ofsted_data <- read_csv(
     "data/Inspection Outcome Map Data - Logistic Regression.csv") %>% 
-    rename(lat = Northing, long = Easting)
+    rename(lat = Northing, long = Easting) %>%
+    mutate(
+        URN = as.integer(URN),
+        LAESTAB = as.integer(LAESTAB),
+        Estab = as.integer(LAESTAB - 9370000),
+        Publicationdate = as.integer(Publicationdate),
+        Previouspublicationdate = as.integer(Previouspublicationdate),
+        Overalleffectiveness = as.integer(Overalleffectiveness),
+        Previousfullinspectionoveralleffectiveness = as.integer(Previousfullinspectionoveralleffectiveness),
+        Current_OE = ifelse(Overalleffectiveness == 1, "Outstanding", 
+                            ifelse(Overalleffectiveness == 2, "Good",
+                                   ifelse(Overalleffectiveness == 3, "Requires Improvement",
+                                          "Inadequate"))),
+        Previous_OE = ifelse(Previousfullinspectionoveralleffectiveness == 1, "Outstanding",
+                             ifelse(Previousfullinspectionoveralleffectiveness == 2, "Good",
+                                    ifelse(Previousfullinspectionoveralleffectiveness == 3, "Requires Improvement",
+                                           "Inadequate"))),
+        Academy = ifelse(Academy == 1, "Yes", "No"),
+        LACode = as.integer(LACode),
+        daysbetween = as.integer(daysbetween),
+        IDACI = as.integer(IDACI),
+        num_pupils = as.integer(num_pupils),
+        bad_out_chance = bad_out_chance*100,
+        good_out_chance = good_out_chance*100) %>%
+    mutate(
+        Pub_date = format(as.Date(Publicationdate, origin = "1970-01-01"),"%d/%m/%Y"),
+        Prev_Pub_date = format(as.Date(Previouspublicationdate, origin = "1970-01-01"),"%d/%m/%Y"),
+        dayssince = as.integer(Sys.Date() - as.Date(Publicationdate, origin = "1970-01-01"))
+    )
 
 
 ui <- fluidPage(
@@ -78,24 +106,33 @@ server <- function(input, output, session) {
     
     observeEvent(input$schoolmap_marker_click,
                  {
+                     cat(str(input$schoolmap_marker_click))
                      loc <- input$schoolmap_marker_click
 
-                     school_id <- input$schoolmap_marker_click$LAESTAB
+                     school_id <- input$schoolmap_marker_click$id
 
                      school_details <- ofsted_data %>%
                          filter(LAESTAB == school_id) %>%
                          slice(1)
 
                      leafletProxy("schoolmap") %>%
-                         addPopups(loc$long, loc$lat, paste0("This is a test more fields to appear soon",
-                                                             school_details$Schoolname, "more stuff"))
+                         addPopups(loc$lng, loc$lat, paste0("School name: ", school_details$Schoolname,
+                                                            "<br>DfE Number: ", school_details$LAESTAB,
+                                                            "<br>Is the school an academy? ", school_details$Academy,
+                                                            "<br>Latest inspection outcome: ", school_details$Current_OE,
+                                                            "<br>Most recent full inspection date: ", school_details$Pub_date,
+                                                            "<br>Days since last inspection: ", school_details$dayssince,
+                                                            "<br>Chance of getting a less than good outcome at next inspection: ", school_details$bad_out_chance,"%"
+                                                            ))
                  }
                  )
         
     output$schoolmap <- renderLeaflet({
         leaflet() %>%
             addProviderTiles(providers$OpenStreetMap) %>%
-            addMarkers(data = map_data())
+            addMarkers(data = map_data(),
+                       layerId = map_data()@data$LAESTAB
+                       )
             
         })
         
