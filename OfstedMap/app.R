@@ -30,7 +30,7 @@ ui <- fluidPage(
             selectInput("phase", "Select school phase(s)", 
                         unique(ofsted_data$Ofstedphase), multiple = TRUE),
             selectInput("outcome", "Select current ofsted outcome group", 
-                        unique(ofsted_map$prev_good), multiple = TRUE),
+                        unique(ofsted_data$prev_good), multiple = TRUE),
             numericInput("poorschools", "Enter how many at risk schools to display", value = 20)
         ),
         mainPanel(
@@ -76,16 +76,31 @@ server <- function(input, output, session) {
             )
     })
     
+    observeEvent(input$schoolmap_marker_click,
+                 {
+                     loc <- input$schoolmap_marker_click
+
+                     school_id <- input$schoolmap_marker_click$LAESTAB
+
+                     school_details <- ofsted_data %>%
+                         filter(LAESTAB == school_id) %>%
+                         slice(1)
+
+                     leafletProxy("schoolmap") %>%
+                         addPopups(loc$long, loc$lat, paste0("This is a test more fields to appear soon",
+                                                             school_details$Schoolname, "more stuff"))
+                 }
+                 )
+        
     output$schoolmap <- renderLeaflet({
         leaflet() %>%
             addProviderTiles(providers$OpenStreetMap) %>%
-            addMarkers(
-                data = map_data()
-                # lng = map_table()$long,
-                # lat = map_table()$lat
-            )
+            addMarkers(data = map_data())
+            
+        })
         
-    })
+        
+
     
     output$datatable <- renderTable(map_data())
 }

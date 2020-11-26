@@ -325,8 +325,8 @@ warwickshire_map_output_lr <- model_lr_outcome %>%
 ofsted_rejoin_lr <- ofsted_filtered %>%
   filter(LACode == 937)
 
-warwickshire_map_output_lr <- bind_cols(warwickshire_map_output_lr, ofsted_rejoin_lr)
+warwickshire_map_output_lr <- bind_cols(ofsted_rejoin_lr, warwickshire_map_output_lr)
 
-write.csv(warwickshire_map_output, file = "C:/Users/acar3/OneDrive - Warwickshire County Council/Desktop/Data Science Accelerator/Ofsted Outcome Predictor/Ofsted-Outcome-Predictor/data/Inspection Outcome Map Data - Logistic Regression.csv")
+write.csv(warwickshire_map_output_lr, file = "C:/Users/acar3/OneDrive - Warwickshire County Council/Desktop/Data Science Accelerator/Ofsted Outcome Predictor/Ofsted-Outcome-Predictor/data/Inspection Outcome Map Data - Logistic Regression.csv")
 
 ```
