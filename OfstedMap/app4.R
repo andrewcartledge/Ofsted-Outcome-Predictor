@@ -52,6 +52,10 @@ ofsted_data <- read_csv(
         num_pupils = as.integer(num_pupils),
         bad_out_chance = round(bad_out_chance*100,2),
         good_out_chance = good_out_chance*100) %>%
+    mutate(chance_category = case_when(
+        bad_out_chance <= 35 ~ "Low",
+        bad_out_chance > 35 ~ "High"
+    )) %>% 
     mutate(
         Pub_date = format(as.Date(Publicationdate, origin = "1970-01-01"),"%d/%m/%Y"),
         Prev_Pub_date = format(as.Date(Previouspublicationdate, origin = "1970-01-01"),"%d/%m/%Y"),
@@ -59,6 +63,7 @@ ofsted_data <- read_csv(
     ) %>%
     arrange(desc(bad_out_chance))
 
+factpal <- colorFactor(c("#003300", "#FFFF66"), ofsted_data$chance_category)
 
 ui <- fluidPage(
     sidebarLayout(
@@ -90,7 +95,7 @@ server <- function(input, output, session) {
         school_data <- temp_data %>%
             select(
                 URN, DfE_number, Schoolname, Ofstedphase, Typeofeducation, Academy, IDACI, bad_out_chance, 
-                Current_OE, Pub_date, days_since
+                Current_OE, Pub_date, days_since, chance_category
             )
         
         ofsted_map <- SpatialPointsDataFrame(
@@ -118,13 +123,6 @@ server <- function(input, output, session) {
                  }
     )
     
-    bandColour <- function(ofsted_data) {
-        sapply(ofsted_data$bad_out_chance, function(bad_out_chance) {
-            if (bad_out_chance <= 35) {"#003300"}
-            else if (bad_out_chance > 35) {"#FFFF66"}
-        })
-    }
-    
     output$schoolmap <- renderLeaflet({
         leaflet() %>%
             addProviderTiles(providers$OpenStreetMap) %>%
@@ -132,8 +130,8 @@ server <- function(input, output, session) {
                              radius = 5,
                              layerId = map_data()@data$URN,
                              opacity = 1,
-                             color = bandColour,
-                             fillColor = bandColour,
+                             color = ~ factpal(chance_category),
+                             fillColor = ~ factpal(chance_category),
                              fillOpacity = 1
             )
     })
