@@ -38,9 +38,9 @@ ofsted_data <- read_csv(
         Overalleffectiveness = as.integer(Overalleffectiveness),
         Previousfullinspectionoveralleffectiveness = as.integer(Previousfullinspectionoveralleffectiveness),
         Current_OE = as.factor(ifelse(Overalleffectiveness == 1, "Outstanding", 
-                                      ifelse(Overalleffectiveness == 2, "Good",
-                                             ifelse(Overalleffectiveness == 3, "Requires Improvement",
-                                                    "Inadequate")))),
+                            ifelse(Overalleffectiveness == 2, "Good",
+                                   ifelse(Overalleffectiveness == 3, "Requires Improvement",
+                                          "Inadequate")))),
         Previous_OE = ifelse(Previousfullinspectionoveralleffectiveness == 1, "Outstanding",
                              ifelse(Previousfullinspectionoveralleffectiveness == 2, "Good",
                                     ifelse(Previousfullinspectionoveralleffectiveness == 3, "Requires Improvement",
@@ -59,11 +59,16 @@ ofsted_data <- read_csv(
     ) %>%
     arrange(desc(bad_out_chance))
 
+ofsted_data <- ofsted_data %>%
+    mutate(colour_bins = cut(bad_out_chance, c(0,5,10,15,20,25,30,35,40,45,50),
+        labels = c('0-5','5-10','10-15','15-20','20-25','25-30','30-35','35-40','40-45','45-50'))) #%>%
+    #mutate(point_colour = colorFactor(palette = 'RdYlGn', colour_bins))
+
 
 ui <- fluidPage(
     sidebarLayout(
         sidebarPanel(
-            numericInput("poorschools", "Enter how many at risk schools to display", value = 20),
+            numericInput("poorschools", "Enter how many at risk schools to display", value = 200),
             leafletOutput("schoolmap", width = "100%", height = 850)
         ),
         mainPanel(
@@ -90,8 +95,8 @@ server <- function(input, output, session) {
         school_data <- temp_data %>%
             select(
                 URN, DfE_number, Schoolname, Ofstedphase, Typeofeducation, Academy, IDACI, bad_out_chance, 
-                Current_OE, Pub_date, days_since
-            )
+                Current_OE, Pub_date, days_since, colour_bins
+                )
         
         ofsted_map <- SpatialPointsDataFrame(
             coords = school_location,
@@ -104,39 +109,32 @@ server <- function(input, output, session) {
     observeEvent(input$schoolmap_marker_click,
                  {
                      loc <- input$schoolmap_marker_click
-                     
+
                      school_id <- input$schoolmap_marker_click$id
-                     
+
                      school_details <- ofsted_data %>%
                          filter(URN == school_id) %>%
                          slice(1)
-                     
+
                      leafletProxy("schoolmap") %>%
                          addPopups(loc$lng, loc$lat, paste0("<b>School name:</b> ", school_details$Schoolname,
                                                             "<br><b>DfE Number:</b> ", school_details$DfE_number
-                         ))
+                                                            ))
                  }
-    )
-    
-    bandColour <- function(ofsted_data) {
-        sapply(ofsted_data$bad_out_chance, function(bad_out_chance) {
-            if (bad_out_chance <= 35) {"#003300"}
-            else if (bad_out_chance > 35) {"#FFFF66"}
-        })
-    }
-    
+                 )
+   
     output$schoolmap <- renderLeaflet({
         leaflet() %>%
             addProviderTiles(providers$OpenStreetMap) %>%
             addCircleMarkers(data = map_data(),
-                             radius = 5,
-                             layerId = map_data()@data$URN,
-                             opacity = 1,
-                             color = bandColour,
-                             fillColor = bandColour,
-                             fillOpacity = 1
+                       radius = 5,
+                       layerId = map_data()@data$URN,
+                       opacity = 1,
+                       color = colorFactor(palette = 'RdYlGn', map_data()@data$colour_bins),
+                       fillColor = colorFactor(palette = 'RdYlGn', map_data()@data$colour_bins),
+                       fillOpacity = 1
             )
-    })
+        })
     
     output$datatable <- renderDT(map_data()@data,
                                  class = "cell-border stripe",
@@ -145,7 +143,7 @@ server <- function(input, output, session) {
                                  rownames = FALSE,
                                  options = list(sDom  = '<"top">lrt<"bottom">ip'),
                                  selection = "single"
-    )
+                                 )
 }
 
 shinyApp(ui, server)
