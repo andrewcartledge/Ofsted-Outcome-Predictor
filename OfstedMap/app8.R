@@ -10,8 +10,6 @@ if(!require("tidyverse")) install.packages("tidyverse", dependencies = TRUE)
 if(!require("leaflet")) install.packages("leaflet", dependencies = TRUE)
 if(!require("sp")) install.packages("sp", dependencies = TRUE)
 if(!require("DT")) install.packages("DT", dependencies = TRUE)
-if(!require("RColorBrewer")) install.packages("RColorBrewer", dependencies = TRUE)
-if(!require("crosstalk")) install.packages("crosstalk", dependencies = TRUE)
 
 # Load packages
 
@@ -21,8 +19,6 @@ library(tidyverse)
 library(leaflet)
 library(sp)
 library(DT)
-library(RColorBrewer)
-library(crosstalk)
 
 # Load in csv of data and predictions
 
@@ -42,9 +38,9 @@ ofsted_data <- read_csv(
         Overalleffectiveness = as.integer(Overalleffectiveness),
         Previousfullinspectionoveralleffectiveness = as.integer(Previousfullinspectionoveralleffectiveness),
         Current_OE = as.factor(ifelse(Overalleffectiveness == 1, "Outstanding", 
-                            ifelse(Overalleffectiveness == 2, "Good",
-                                   ifelse(Overalleffectiveness == 3, "Requires Improvement",
-                                          "Inadequate")))),
+                                      ifelse(Overalleffectiveness == 2, "Good",
+                                             ifelse(Overalleffectiveness == 3, "Requires Improvement",
+                                                    "Inadequate")))),
         Previous_OE = ifelse(Previousfullinspectionoveralleffectiveness == 1, "Outstanding",
                              ifelse(Previousfullinspectionoveralleffectiveness == 2, "Good",
                                     ifelse(Previousfullinspectionoveralleffectiveness == 3, "Requires Improvement",
@@ -56,6 +52,17 @@ ofsted_data <- read_csv(
         num_pupils = as.integer(num_pupils),
         bad_out_chance = round(bad_out_chance*100,2),
         good_out_chance = good_out_chance*100) %>%
+    mutate(chance_category = case_when(
+        bad_out_chance <= 5 ~ "00-05",
+        bad_out_chance <= 10 ~ "05-10",
+        bad_out_chance <= 15 ~ "10-15",
+        bad_out_chance <= 20 ~ "15-20",
+        bad_out_chance <= 25 ~ "20-25",
+        bad_out_chance <= 30 ~ "25-30",
+        bad_out_chance <= 35 ~ "30-35",
+        bad_out_chance <= 40 ~ "35-40",
+        bad_out_chance <= 45 ~ "40-45",
+        bad_out_chance > 45 ~ "45+")) %>% 
     mutate(
         Pub_date = format(as.Date(Publicationdate, origin = "1970-01-01"),"%d/%m/%Y"),
         Prev_Pub_date = format(as.Date(Previouspublicationdate, origin = "1970-01-01"),"%d/%m/%Y"),
@@ -63,16 +70,13 @@ ofsted_data <- read_csv(
     ) %>%
     arrange(desc(bad_out_chance))
 
-ofsted_data <- ofsted_data %>%
-    mutate(colour_bins = cut(bad_out_chance, c(0,5,10,15,20,25,30,35,40,45,50),
-        labels = c('0-5','5-10','10-15','15-20','20-25','25-30','30-35','35-40','40-45','45-50'))) #%>%
-    #mutate(point_colour = colorFactor(palette = 'RdYlGn', colour_bins))
-
+factpal <- colorFactor(c("#ffe6e6","#ffcccc","#ffb3b3","#ff9999","#ff8080","#ff6666","#ff4d4d","#ff3333","#ff1a1a","#ff0000"), 
+                       ofsted_data$chance_category)
 
 ui <- fluidPage(
     sidebarLayout(
         sidebarPanel(
-            numericInput("poorschools", "Enter how many at risk schools to display", value = 200),
+            numericInput("poorschools", "Enter how many at risk schools to display (default is maximum)", value = nrow(ofsted_data)),
             leafletOutput("schoolmap", width = "100%", height = 850)
         ),
         mainPanel(
@@ -99,8 +103,8 @@ server <- function(input, output, session) {
         school_data <- temp_data %>%
             select(
                 URN, DfE_number, Schoolname, Ofstedphase, Typeofeducation, Academy, IDACI, bad_out_chance, 
-                Current_OE, Pub_date, days_since, colour_bins
-                )
+                Current_OE, Pub_date, days_since, chance_category
+            )
         
         ofsted_map <- SpatialPointsDataFrame(
             coords = school_location,
@@ -110,46 +114,44 @@ server <- function(input, output, session) {
             )
     })
     
-    shared_map_data <- SharedData$new(map_data)
-    
     observeEvent(input$schoolmap_marker_click,
                  {
                      loc <- input$schoolmap_marker_click
-
+                     
                      school_id <- input$schoolmap_marker_click$id
-
+                     
                      school_details <- ofsted_data %>%
                          filter(URN == school_id) %>%
                          slice(1)
-
+                     
                      leafletProxy("schoolmap") %>%
                          addPopups(loc$lng, loc$lat, paste0("<b>School name:</b> ", school_details$Schoolname,
                                                             "<br><b>DfE Number:</b> ", school_details$DfE_number
-                                                            ))
+                         ))
                  }
-                 )
-   
+    )
+    
     output$schoolmap <- renderLeaflet({
         leaflet() %>%
             addProviderTiles(providers$OpenStreetMap) %>%
             addCircleMarkers(data = map_data(),
-                       radius = 5,
-                       layerId = map_data()@data$URN,
-                       opacity = 1,
-                       color = ~colorFactor(palette = 'RdYlGn', map_data()@data$colour_bins),
-                       fillColor = ~colorFactor(palette = 'RdYlGn', map_data()@data$colour_bins),
-                       fillOpacity = 0.5
+                             radius = 5,
+                             layerId = map_data()@data$URN,
+                             opacity = 0.75,
+                             color = ~ factpal(chance_category),
+                             fillColor = ~ factpal(chance_category),
+                             fillOpacity = 0.9
             )
-        })
+    })
     
-    output$datatable <- renderDT(select(map_data()@data, -colour_bins),
+    output$datatable <- renderDT(map_data()@data,
                                  class = "cell-border stripe",
                                  filter = "top",
                                  colnames = c("URN", "DfE number", "School name", "School Phase", "Type of Education", "Academy", "IDACI Quintile", "Chance of less than good outcome", "Current Overall Effectiveness", "Inspection Published", "Days since last full inspection"),
                                  rownames = FALSE,
                                  options = list(sDom  = '<"top">lrt<"bottom">ip'),
                                  selection = "single"
-                                 )
+    )
 }
 
 shinyApp(ui, server)
