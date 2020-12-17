@@ -16,6 +16,7 @@ if(!require("tidyverse")) install.packages("tidyverse", dependencies = TRUE)
 if(!require("leaflet")) install.packages("leaflet", dependencies = TRUE)
 if(!require("sp")) install.packages("sp", dependencies = TRUE)
 if(!require("DT")) install.packages("DT", dependencies = TRUE)
+if(!require("crosstalk")) install.packages("DT", dependencies = TRUE)
 
 # Load packages
 
@@ -25,6 +26,7 @@ library(tidyverse)
 library(leaflet)
 library(sp)
 library(DT)
+library(crosstalk)
 
 # Load in csv of data and predictions and mutate it to have the right data types and form
 
@@ -136,6 +138,10 @@ server <- function(input, output, session) {
             proj4string = CRS("+init=epsg:27700")) %>%
             spTransform(CRS("+init=epsg:4326")
             )
+        
+        # convert back to a normal dataframe
+
+        cbind(ofsted_map@coords, school_data)
     })
     
     #Turn the newly created reactive map_data into a Shared Dataframe
@@ -203,13 +209,14 @@ server <- function(input, output, session) {
     #Ideally selecting a row in the table should cause the map to focus into that particular school on the map but this is not currently
     #working.
     
-    output$datatable <- renderDT(select(shared_map$origData()@data,-chance_category),
+    output$datatable <- renderDT(shared_map,
                                  class = "cell-border stripe",
                                  filter = "top",
                                  colnames = c("URN", "DfE number", "School name", "School Phase", "Type of Education", "Academy", "IDACI Quintile", "Chance of less than good outcome", "Current Overall Effectiveness", "Inspection Published", "Days since last full inspection"),
                                  rownames = FALSE,
                                  options = list(sDom  = '<"top">rt<"bottom">ip'),
-                                 selection = "single"
+                                 selection = "single",
+                                 server = FALSE
     )
     
 }
