@@ -177,28 +177,6 @@ server <- function(input, output, session) {
                  }
     )
     
-    #NEW FORMULA FOR ZOOMS
-    
-    observeEvent(input$datatable_rows_selected, {
-        school_selected <- input$datatable_rows_selected
-        
-        temp_pos <- shared_map$origData() %>%
-            mutate(rn = row_number()) %>%
-            filter(rn == school_selected) %>%
-            select(long, lat)
-        
-        cat(str(temp_pos))
-        
-        zoomToSchool(temp_pos)
-        
-    }
-    )
-    
-    zoomToSchool() <- reactive({
-        output$schoolmap %>%
-            flyTo(temp_pos$long, temp_pos$lat, 13)
-    })
-    
     #This section draws the map
     
     output$schoolmap <- renderLeaflet({
